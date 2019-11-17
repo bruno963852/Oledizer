@@ -2,34 +2,49 @@ from PIL import Image
 import argparse
 
 parser = argparse.ArgumentParser(description='Turn an pixel art image into a python array for oled display')
-parser.add_argument('image', metavar='Image', type=str, nargs='+',
+parser.add_argument('image', metavar='Image', type=str, nargs='?',
                    help='image for processing')
-parser.add_argument('--output', metavar='-o', type=str, nargs='+',
+parser.add_argument('--output', '-o', metavar='-o', type=str, nargs='?',
                    help='name of the output file')
+parser.add_argument('--crop', '-c', action='store_true', default=False,
+                    help='if the image should be cropped')
 
 args = parser.parse_args()
+print(args)
 
-print(args.image)
+def image_to_boolean_array(image):
+    pixels = image.load()
 
-try:
-    image = Image.open(args.image[0], mode='r')
-except:
-    print("Error loading image...")
+    width, height = image.size
+
+    output = []
+
+    for y in range(height):
+        row = []
+        for x in range(width):
+            _, _, _, alpha = pixels[x, y]
+            row.append(alpha > 0)
+        output.append(row.copy())
     
+    return output
 
-pixels = image.load()
+def generate_icon_file(image_file, output_file=None, crop=False):
+    try:
+        image = Image.open(args.image, mode='r')
+    except IOError:
+        print("Error loading image...")
+        return
 
-width, height = image.size
+    if crop:
+        image = image.crop(image.getbbox())
 
-output = []
+    output = image_to_boolean_array(image)
 
-for y in range(height):
-    row = []
-    for x in range(width):
-        r, g, b, a = pixels[x, y]
-        row.append(a > 0)
-    output.append(row.copy())
+    if output_file is None:
+        print(output)
+    else:
+        with open(output_file + '.py', 'w') as file:
+            file.write(output_file + ' = ')
+            file.write(str(output))
 
-print(output)
-
-
+generate_icon_file(args.image, args.output, args.crop)
