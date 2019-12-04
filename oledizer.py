@@ -8,8 +8,8 @@ parser.add_argument('--output', '-o', metavar='-o', type=str, nargs='?',
                    help='name of the output file')
 parser.add_argument('--crop', '-c', action='store_true', default=False,
                     help='if the image should be cropped')
-parser.add_argument('--format', '-f', default="bytes", nargs='?', choices=['bytes', 'bool'],
-                    help='The format of the output')
+# parser.add_argument('--format', '-f', default="bytes", nargs='?', choices=['bytes', 'bool'],
+#                     help='The format of the output.')
 
 args = parser.parse_args()
 print(args)
@@ -24,7 +24,7 @@ def image_to_boolean_tuple(image: Image):
 
     width, height = image.size
 
-    output = []
+    output = [width, height]
 
     for y in range(height):
         row = []
@@ -33,9 +33,9 @@ def image_to_boolean_tuple(image: Image):
             row.append(alpha > 0)
         output.append(tuple(row))
     
-    return output
+    return tuple(output)
 
-def image_to_bytes(image):
+def image_to_bytes(image: Image) -> bytes:
     """ Gets the Image object and converts it to tuple with widht, height and bytes with the image data
     :param image: The image to be converted
 
@@ -46,7 +46,8 @@ def image_to_bytes(image):
     width, height = image.size
 
     imagebytes = bytearray()
-    output = [width, height]
+    imagebytes.extend((width).to_bytes(2, byteorder='big'))
+    imagebytes.extend((height).to_bytes(2, byteorder='big'))
 
     bytecounter = 0
     mbyte = 0
@@ -60,8 +61,7 @@ def image_to_bytes(image):
                 imagebytes.append(mbyte)
                 bytecounter = 0
                 mbyte=0
-    output.append(bytes(imagebytes))
-    return tuple(output)
+    return bytes(imagebytes)
 
 def generate_icon_file(image_file: str, output_file: str = None, crop: bool = False, output_format: str = 'bytes'):
     """ Gets an image file and converts it to a python file to be used to draw the image on
@@ -87,8 +87,9 @@ def generate_icon_file(image_file: str, output_file: str = None, crop: bool = Fa
     if output_file is None:
         print(output)
     else:
-        with open(output_file + '.py', 'w') as file:
-            file.write(output_file + ' = ')
-            file.write(str(tuple(output)))
+        if not '.mpi' in output_file:
+            output_file = output_file + '.mpi'
+        with open(output_file, 'wb') as file:
+            file.write(output)
 
 generate_icon_file(args.image, args.output, args.crop)
